@@ -1,0 +1,18 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BookStay.API", "BookStay.API\BookStay.API.csproj", "{BC0DB8E4-0DBF-4BBB-A9F7-F21DD015AF57}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BC0DB8E4-0DBF-4BBB-A9F7-F21DD015AF57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC0DB8E4-0DBF-4BBB-A9F7-F21DD015AF57}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC0DB8E4-0DBF-4BBB-A9F7-F21DD015AF57}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC0DB8E4-0DBF-4BBB-A9F7-F21DD015AF57}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+	EndGlobalSection
+EndGlobal

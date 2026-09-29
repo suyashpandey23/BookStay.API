@@ -1,0 +1,47 @@
+### GET all stays
+GET {{BookStay.API_HostAddress}}/api/stays
+Accept: application/json
+
+###
+
+### GET stay by ID
+GET {{BookStay.API_HostAddress}}/api/stays/1
+Accept: application/json
+
+###
+
+### POST new stay
+POST {{BookStay.API_HostAddress}}/api/stays
+Content-Type: application/json
+
+{
+  "id": 6,
+  "name": "Stay 6",
+  "address": "Address 6",
+  "city": "City 6",
+  "country": "Country 6",
+  "rating": "5 Stars",
+  "imageUrl": "ImageUrl 6"
+}
+
+###
+
+### PUT update stay
+PUT {{BookStay.API_HostAddress}}/api/stays/1
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "Updated Stay 1",
+  "address": "Updated Address 1",
+  "city": "City 1",
+  "country": "Country 1",
+  "rating": "4 Stars",
+  "imageUrl": "ImageUrl 1"
+}
+
+###
+
+### DELETE stay
+DELETE {{BookStay.API_HostAddress}}/api/stays/1
+
