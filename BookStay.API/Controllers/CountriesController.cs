@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using BookStay.API.DTOs.Country;
 using BookStay.API.Results;
 using BookStay.API.Services;
+using BookStay.API.Constants;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookStay.API.Controllers
 {
@@ -25,6 +27,7 @@ namespace BookStay.API.Controllers
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class CountriesController : BaseApiController
     {
         // Service for country business logic.
@@ -55,6 +58,7 @@ namespace BookStay.API.Controllers
         /// </summary>
         /// <returns>200 OK with list of countries or error status</returns>
         [HttpGet]
+  
         public async Task<ActionResult<IEnumerable<GetCountriesDto>>> GetCountries()
         {
             // Call the service to get all countries.
@@ -98,6 +102,7 @@ namespace BookStay.API.Controllers
         /// <param name="countryDto">The updated country data</param>
         /// <returns>204 No Content on success, error status on failure</returns>
         [HttpPut("{id}")]
+        [Authorize(Roles = RoleNames.Administrator)]
         public async Task<IActionResult> PutCountry(int id, UpdateCountryDto countryDto)
         {
             var result = await _countriesService.UpdateCountry(id, countryDto);
@@ -119,6 +124,7 @@ namespace BookStay.API.Controllers
         /// <param name="countryDto">The country data to create</param>
         /// <returns>201 Created with Location header on success, error status on failure</returns>
         [HttpPost]
+        [Authorize(Roles = RoleNames.Administrator)]
         public async Task<ActionResult<GetCountryDto>> PostCountry(CreateCountryDto countryDto)
         {
             var result = await _countriesService.CreateCountry(countryDto);
@@ -150,7 +156,10 @@ namespace BookStay.API.Controllers
         /// </summary>
         /// <param name="id">The country ID to delete</param>
         /// <returns>204 No Content on success, error status on failure</returns>
+        ///
+        
         [HttpDelete("{id}")]
+        [Authorize(Roles = RoleNames.Administrator)]
         public async Task<IActionResult> DeleteCountry(int id)
         {
             var result = await _countriesService.DeleteCountry(id);

@@ -37,5 +37,9 @@ public class AuthenticationDefaults
     /// Currently it's defined but may not be actively used in the current implementation.
     /// </summary>
     public const string AppName = "BookStayApi";
-    
+
+    public const string ApiKeyHeaderName = "X-Api-Key";
+    public const string ApiKeyScheme="ApiKey"; 
+        
+
 }

@@ -1,3 +1,5 @@
+using System.Reflection;
+using BookStay.API.Data.Configurations;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -61,4 +63,51 @@ public class StayListingDBContext : IdentityDbContext<ApplicationUser>
     /// and automatically generates the appropriate SQL commands when SaveChanges is called.
     /// </summary>
     public DbSet<Country> Countries { get; set; }
+
+    /// <summary>
+    /// DbSet representing the ApiKeys table.
+    /// 
+    /// General: This property represents the "ApiKeys" table in the database.
+    /// Used for API key authentication.
+    /// 
+    /// Technical: DbSet for the ApiKey entity used for validating API keys.
+    /// </summary>
+    public DbSet<ApiKey> ApiKeys { get; set; }
+
+    /// <summary>
+    /// DbSet representing the StayAdmins table.
+    /// 
+    /// General: This property represents the "StayAdmins" table in the database.
+    /// Used for managing the relationship between stays and administrator users.
+    /// 
+    /// Technical: DbSet for the StayAdmin entity which represents the many-to-many
+    /// relationship between Stay and ApplicationUser.
+    /// </summary>
+    public DbSet<StayAdmin> StayAdmins { get; set; }
+
+    /// <summary>
+    /// DbSet representing the Bookings table.
+    /// 
+    /// General: This property represents the "Bookings" table in the database.
+    /// Used for managing bookings/reservations for stays.
+    /// 
+    /// Technical: DbSet for the Booking entity which tracks user bookings
+    /// for stays/accommodations.
+    /// </summary>
+    public DbSet<Booking> Bookings { get; set; }
+    
+    
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+         base.OnModelCreating(builder);
+
+        // Apply entity configurations
+        builder.ApplyConfiguration(new BookingConfiguration());
+
+        // builder.Entity<ApiKey>(b => {
+        //     b.HasIndex(k => k.Key).IsUnique();
+        // });
+        //
+
+    }
 }

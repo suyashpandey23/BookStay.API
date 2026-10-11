@@ -1,3 +1,4 @@
+using System.Text;
 using BookStay.API.Constants;
 using BookStay.API.Data;
 using BookStay.API.Extensions;
@@ -5,8 +6,11 @@ using BookStay.API.Handlers;
 using BookStay.API.MappingProfiles;
 using BookStay.API.Services;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 /// <summary>
 /// The entry point of the ASP.NET Core application.
@@ -53,7 +57,11 @@ builder.Services.AddDbContext<StayListingDBContext>(options =>
 // Technical: AddIdentityApiEndpoints adds minimal API endpoints for user management
 // (register, login, logout, etc.). AddEntityFrameworkStores tells Identity to use
 // Entity Framework for storing user data in our database.
-builder.Services.AddIdentityApiEndpoints<ApplicationUser>().AddEntityFrameworkStores<StayListingDBContext>();
+// builder.Services.AddIdentityApiEndpoints<ApplicationUser>().AddEntityFrameworkStores<StayListingDBContext>();
+builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<StayListingDBContext>();
+
 
 // Configure custom authentication.
 // General: Set up our custom Basic Authentication handler.
@@ -61,10 +69,66 @@ builder.Services.AddIdentityApiEndpoints<ApplicationUser>().AddEntityFrameworkSt
 // DefaultScheme: Specifies which authentication scheme to use by default.
 // DefaultChallengeScheme: Which scheme to use when authentication is challenged (401).
 // AddScheme registers our custom BasicAuthenticationHandler with the name "Basic".
-builder.Services.AddAuthentication(options => {
-    options.DefaultScheme = AuthenticationDefaults.BasicScheme;
-    options.DefaultChallengeScheme = AuthenticationDefaults.BasicScheme;
-}).AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>(AuthenticationDefaults.BasicScheme, _ => { });
+
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>() ?? new JwtSettings();
+if (string.IsNullOrWhiteSpace(jwtSettings.Key))
+{
+    // Log.Fatal("JwtSettings:Key is not configured");
+    throw new InvalidOperationException("JwtSettings:Key is not configured.");
+}
+
+
+
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+            ClockSkew = TimeSpan.Zero // Default is 5 minutes
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnChallenge = context =>
+            {
+                context.HandleResponse();
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/problem+json";
+
+                var problemDetails = new ProblemDetails
+                {
+                    Status = StatusCodes.Status401Unauthorized,
+                    Title = "Unauthorized",
+                    Detail = context.ErrorDescription ?? "Authentication is required to access this resource.",
+                    Instance = context.Request.Path
+                };
+
+                return context.Response.WriteAsJsonAsync(problemDetails);
+            }
+        };
+    })
+    .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>(AuthenticationDefaults.BasicScheme, _ => { })
+    .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(AuthenticationDefaults.ApiKeyScheme, _ => { });
+
+
+
+// builder.Services.AddAuthentication(options => {
+//     options.DefaultScheme = AuthenticationDefaults.BasicScheme;
+//     options.DefaultChallengeScheme = AuthenticationDefaults.BasicScheme;
+// }).AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>(AuthenticationDefaults.BasicScheme, _ => { });
 
 // Add authorization services.
 // General: Enables authorization features like [Authorize] attribute.
@@ -80,7 +144,14 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<ICountriesService, CountriesService>();
 builder.Services.AddScoped<IStayService, StayService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IApiKeyValidatorService,ApiKeyValidatorService>();
+builder.Services.AddScoped<BookStay.API.Contracts.IBookingService, BookStay.API.Services.BookingService>();
 
+// Add HTTP context accessor for accessing user information.
+// General: Allows services to access the current HTTP request context.
+// Technical: IHttpContextAccessor provides access to HttpContext, which contains
+// information about the current request including the authenticated user.
+builder.Services.AddHttpContextAccessor();
 // Configure AutoMapper for object mapping.
 // General: AutoMapper is a library that maps objects of different types.
 // It's commonly used to map database entities to DTOs.
@@ -90,6 +161,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddAutoMapper(cfg => {
     cfg.AddProfile<StayMappingProfile>();
     cfg.AddProfile<CountryMappingProfile>();
+    cfg.AddProfile<BookingMappingProfile>();
 });
 //----------------------------------------------------------------
 

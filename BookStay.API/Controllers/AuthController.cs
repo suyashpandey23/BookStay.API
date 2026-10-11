@@ -69,9 +69,9 @@ public class AuthController(IAuthService authService) : BaseApiController
     /// - IActionResult: Allows returning different HTTP status codes without data.
     /// </summary>
     /// <param name="loginUserDto">Login credentials from the request body (auto-bound from JSON)</param>
-    /// <returns>200 OK on success, 401 Unauthorized on failure</returns>
+    /// <returns>200 OK with JWT token on success, 401 Unauthorized on failure</returns>
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginUserDto loginUserDto)
+    public async Task<ActionResult<string>> Login(LoginUserDto loginUserDto)
     {
         // Call the service layer to validate credentials.
         // General: Delegate authentication to the service.

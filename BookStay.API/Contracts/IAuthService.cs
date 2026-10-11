@@ -15,6 +15,7 @@ namespace BookStay.API.Services;
 /// </summary>
 public interface IAuthService
 {
+    string UserId { get; }
     /// <summary>
     /// Registers a new user in the system.
     /// 
@@ -41,6 +42,6 @@ public interface IAuthService
     /// The Result type contains IsSuccess flag and Error information.
     /// </summary>
     /// <param name="loginUserDto">The login credentials from the client</param>
-    /// <returns>A Result indicating success or failure with error details</returns>
-    Task<Result> Login(LoginUserDto loginUserDto);
+    /// <returns>A Result containing the JWT token on success or error details on failure</returns>
+    Task<Result<string>> Login(LoginUserDto loginUserDto);
 }

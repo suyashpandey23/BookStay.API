@@ -1,8 +1,13 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using BookStay.API.Constants;
 using BookStay.API.Data;
 using BookStay.API.DTOs.Auth;
 using BookStay.API.Results;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace BookStay.API.Services;
 
@@ -19,7 +24,8 @@ namespace BookStay.API.Services;
 /// UserManager: Handles user creation, deletion, password hashing, and role management.
 /// SignInManager: Handles user sign-in, password validation, and authentication.
 /// </summary>
-public class AuthService(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager) : IAuthService
+public class AuthService(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IOptions<JwtSettings> jwtOptions, IHttpContextAccessor httpContextAccessor
+) : IAuthService
 {
     /// <summary>
     /// Registers a new user in the system.
@@ -63,7 +69,7 @@ public class AuthService(UserManager<ApplicationUser> userManager, SignInManager
             var errors = result.Errors.Select(e => new Error(ErrorCodes.BadRequest, e.Description)).ToArray();
             return Result<RegisteredUserDto>.Failure(errors);
         }
-
+        await userManager.AddToRoleAsync(user, registerUserDto.Role);
         // Create a DTO to return to the client (without sensitive data like password).
         // General: We only send back safe information - never the password!
         // Technical: Mapping from domain entity (ApplicationUser) to DTO (RegisteredUserDto)
@@ -73,7 +79,8 @@ public class AuthService(UserManager<ApplicationUser> userManager, SignInManager
             Email = user.Email,
             FirstName = user.FirstName,
             LastName = user.LastName,
-            Id = user.Id
+            Id = user.Id,
+            Role = registerUserDto.Role
         };
 
         // Return success with the registered user data.
@@ -89,8 +96,8 @@ public class AuthService(UserManager<ApplicationUser> userManager, SignInManager
     /// If valid, the user is authenticated; otherwise, an error is returned.
     /// </summary>
     /// <param name="loginUserDto">Login credentials from the client</param>
-    /// <returns>Result indicating success or failure with error details</returns>
-    public async Task<Result> Login(LoginUserDto loginUserDto)
+    /// <returns>Result containing the JWT token on success or error details on failure</returns>
+    public async Task<Result<string>> Login(LoginUserDto loginUserDto)
     {
         // Find the user by email in the database.
         // General: Look up the user account using their email address.
@@ -104,7 +111,7 @@ public class AuthService(UserManager<ApplicationUser> userManager, SignInManager
         // Technical: Checking for null is a common pattern in C#.
         if (user == null)
         {
-            return Result.Failure(new Error(ErrorCodes.BadRequest, "Invalid email or password"));
+            return Result<string>.Failure(new Error(ErrorCodes.BadRequest, "Invalid email or password"));
         }
 
         // Verify the password matches the stored hash.
@@ -119,12 +126,58 @@ public class AuthService(UserManager<ApplicationUser> userManager, SignInManager
         // Technical: result.Succeeded indicates if the password was correct.
         if (!result.Succeeded)
         {
-            return Result.Failure(new Error(ErrorCodes.BadRequest, "Invalid email or password"));
+            return Result<string>.Failure(new Error(ErrorCodes.BadRequest, "Invalid email or password"));
         }
 
         // Return success - user is authenticated.
         // General: Login successful! The caller can proceed.
         // Technical: Result.Success() creates a non-generic successful Result.
-        return Result.Success();
+        var token = await GenerateToken(user);
+        return Result<string>.Success(token);
     }
+    
+    public string UserId => httpContextAccessor?
+                                .HttpContext?
+                                .User?
+                                .FindFirst(JwtRegisteredClaimNames.Sub)?.Value
+                            ?? httpContextAccessor?
+                                .HttpContext?
+                                .User?
+                                .FindFirst(ClaimTypes.NameIdentifier)?.Value
+                            ?? string.Empty;
+    
+    private async Task<string> GenerateToken(ApplicationUser user)
+    {
+        // Set basic user claims
+        var claims = new List<Claim>
+        {
+            new (JwtRegisteredClaimNames.Sub, user.Id),
+            new (JwtRegisteredClaimNames.Email, user.Email!),
+            new (JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new (JwtRegisteredClaimNames.Name, user.FirstName)
+        };
+
+        // Set user role claims
+        var roles = await userManager.GetRolesAsync(user);
+        var roleClaims = roles.Select(x => new Claim(ClaimTypes.Role, x)).ToList();
+
+        claims = claims.Union(roleClaims).ToList();
+
+        // Set JWT Key credentials
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Value.Key));
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        // Create an encoded token
+        var token = new JwtSecurityToken(
+            issuer: jwtOptions.Value.Issuer,
+            audience: jwtOptions.Value.Audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(Convert.ToInt32(jwtOptions.Value.DurationInMinutes)),
+            signingCredentials: credentials
+        );
+
+        // Return token value
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
 }

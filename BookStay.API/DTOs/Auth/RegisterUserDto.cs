@@ -57,4 +57,7 @@ public class RegisterUserDto
 /// </summary>
     [MaxLength(100, ErrorMessage = "Last name cannot exceed 100 characters")]
     public string? LastName { get; set; }
+    
+    
+    public string Role { get; set; } = "User";
 }

@@ -38,4 +38,6 @@ public class RegisteredUserDto
 /// Technical: Same as FirstName - nullable string allows null values.
 /// </summary>
     public string? LastName { get; set; }
+    
+    public string Role { get; set; }
 }

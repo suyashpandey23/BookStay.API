@@ -110,4 +110,30 @@ public class Stay
     /// When using Include(), Entity Framework will populate this property.
     /// </summary>
     public Country? Country {get; set;}
+
+    /// <summary>
+    /// The cost per night for staying at this accommodation.
+    /// 
+    /// General: Price charged per night for this stay/accommodation.
+    /// 
+    /// Technical: decimal type is used for financial calculations to avoid
+    /// floating-point precision issues. This field stores the nightly rate.
+    /// </summary>
+    public decimal PerNightCharge { get; set; }
+
+    /// <summary>
+    /// Collection of administrators for this stay.
+    /// 
+    /// General: Users who have administrative privileges over this accommodation.
+    /// Multiple users can be admins of a single stay.
+    /// 
+    /// Technical: This navigation property represents the one-to-many relationship
+    /// (one stay has many admins). Entity Framework uses this to load
+    /// the related StayAdmin records when querying stays.
+    /// 
+    /// ICollection<StayAdmin> allows multiple StayAdmin records to be associated
+    /// with this stay. This enables the many-to-many relationship between
+    /// Stay and ApplicationUser through the StayAdmin join table.
+    /// </summary>
+    public ICollection<StayAdmin> Admins { get; set; } = new List<StayAdmin>();
 }
